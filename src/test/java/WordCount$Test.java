@@ -17,7 +17,7 @@ public class WordCount$Test {
 
         System.setProperty("hadoop.home.dir", "C:\\winutils\\");
         input[0] = "file:///C:/Users/Alex/IdeaProjects/WordCount/data.txt";
-        input[1] = "file:///C:/Users/Alex/IdeaProjects/CS4433_Project_2/output.txt";
+        input[1] = "file:///C:/Users/Alex/IdeaProjects/CS4433_Project_2/Test.txt";
 
         WordCount wc = new WordCount();
         wc.debug(input);

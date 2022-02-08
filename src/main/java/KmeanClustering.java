@@ -1,8 +1,11 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.Math;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.util.Scanner;
+
+import org.apache.commons.io.FileUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +33,7 @@ public class KmeanClustering {
         }
     }
 
-    public static class TokenizerMapper
+    public static class ClosestCentroidMapper
             extends Mapper<Object, Text, Text, Text>{
 
         private float distance(float x1, float x2, float y1, float y2){
@@ -40,12 +43,16 @@ public class KmeanClustering {
         public void map(Object key, Text value, Context context
         ) throws IOException, InterruptedException {
 
+            //get input point
             String[] record = value.toString().split(",");
             float x_value = Float.valueOf(record[0]);
             float y_value = Float.valueOf(record[1]);
             Point pt = new Point(x_value, y_value);
 
-            String[] cens = context.getConfiguration().get("centroids").toString().split("\t");
+            //get centroids
+            String[] cens = context.getConfiguration().get("centroids").toString().split(" "); // "" "1,2" "2,3"
+
+            //find closest centroid to input point
             Point closest_centroid = null;
             float closest_distance = Float.MAX_VALUE;
             for (String cen: cens){
@@ -57,48 +64,66 @@ public class KmeanClustering {
                     closest_distance = dist;
                 }
             }
+
+            //output closest centroid to pt
             context.write(new Text(closest_centroid.toString()), new Text(pt.toString()));
         }
     }
 
-    public static class IntSumReducer
-            extends Reducer<Text,IntWritable,Text,IntWritable> {
-        private IntWritable result = new IntWritable();
+    public static class CentroidRecalculatorReducer
+            extends Reducer<Text,Text,Text,Text> {
 
-        public void reduce(Text key, Iterable<IntWritable> values,
+        public void reduce(Text key, Iterable<Text> values,
                            Context context
         ) throws IOException, InterruptedException {
-            int sum = 0;
-            for (IntWritable val : values) {
-                sum += val.get();
+            //calculate center of all points in values to get new centroid
+
+            //sum up totals
+            float x_total = 0;
+            float y_total = 0;
+            float count = 0;
+            for(Text pt: values){
+                String[] coords = pt.toString().split(",");
+                float x = Float.valueOf(coords[0]);
+                float y = Float.valueOf(coords[1]);
+                x_total += x;
+                y_total += y;
+                count++;
             }
-            result.set(sum);
-            context.write(key, result);
+
+            //find new centroid
+            float new_centroid_x = x_total/count;
+            float new_centroid_y = y_total/count;
+
+            //write new centroid pt to output file
+            context.write(new Text(String.valueOf(new_centroid_x)), new Text(String.valueOf(new_centroid_y)));
         }
     }
 
     public void debug(String[] args) throws Exception{
+        //initiliaze job
         Configuration conf = new Configuration();
-        conf.set("centroids", args[0]); //TODO replace args[0] "(8,1) (1,2432)"
-        Job job = Job.getInstance(conf, "word count");
-        job.setJarByClass(WordCount.class);
-        job.setMapperClass(TokenizerMapper.class);
-        job.setCombinerClass(IntSumReducer.class);
-        job.setReducerClass(IntSumReducer.class);
+        conf.set("centroids", args[2]);
+        Job job = Job.getInstance(conf, "K means");
+        job.setJarByClass(KmeanClustering.class);
+        job.setMapperClass(ClosestCentroidMapper.class);
+        job.setReducerClass(CentroidRecalculatorReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+        //run job
+        job.waitForCompletion(true);
     }
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "word count");
         job.setJarByClass(WordCount.class);
-        job.setMapperClass(TokenizerMapper.class);
-        job.setCombinerClass(IntSumReducer.class);
-        job.setReducerClass(IntSumReducer.class);
+        job.setMapperClass(ClosestCentroidMapper.class);
+        job.setCombinerClass(CentroidRecalculatorReducer.class);
+        job.setReducerClass(CentroidRecalculatorReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
