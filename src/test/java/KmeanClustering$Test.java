@@ -22,6 +22,7 @@ public class KmeanClustering$Test {
             mac or linux: update the path like "file:///Users/.../projectDirectory/data.txt"
         */
 
+        //This System property thing was breaking things
 //        System.setProperty("hadoop.home.dir", "C:\\winutils\\");
         input[0] = "file:///" + FileSystemBase.fileBase + "/data_points.txt";
         input[1] = "file:///" + FileSystemBase.fileBase + outputFolder;
