@@ -1,11 +1,5 @@
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.Math;
-import java.nio.file.Files;
-import java.util.Scanner;
-
-import org.apache.commons.io.FileUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
