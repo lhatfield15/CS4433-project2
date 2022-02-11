@@ -65,6 +65,32 @@ public class KmeanClustering {
         }
     }
 
+    public static class CentroidRecalculatorCombiner
+            extends Reducer<Text, Text, Text, Text> {
+
+        public void reduce(Text key, Iterable<Text> values,
+                Context context) throws IOException, InterruptedException {
+            // calculate center of all points in values to get new centroid
+
+            // sum up totals
+            float x_total = 0;
+            float y_total = 0;
+            float count = 0;
+            for (Text pt : values) {
+                String[] coords = pt.toString().split(",");
+                float x = Float.valueOf(coords[0]);
+                float y = Float.valueOf(coords[1]);
+                x_total += x;
+                y_total += y;
+                count++;
+            }
+
+            // write new centroid pt to output file xtotal,ytotal,count
+            context.write(key,
+                    new Text(String.valueOf(x_total) + "," + String.valueOf(y_total) + "," + String.valueOf(count)));
+        }
+    }
+
     public static class CentroidRecalculatorReducer
             extends Reducer<Text, Text, Text, Text> {
 
@@ -78,13 +104,14 @@ public class KmeanClustering {
             float y_total = 0;
             float count = 0;
             for (Text pt : values) {
-                String[] coords = pt.toString().split(",");
-                points.add(coords[0] + "," + coords[1]);
-                float x = Float.valueOf(coords[0]);
-                float y = Float.valueOf(coords[1]);
+                String[] data = pt.toString().split(",");
+                points.add(data[0] + "," + data[1]);
+                float x = Float.valueOf(data[0]);
+                float y = Float.valueOf(data[1]);
+                float c = Float.valueOf(data[1]);
                 x_total += x;
                 y_total += y;
-                count++;
+                count += c;
             }
 
             float new_centroid_x = x_total / count;
@@ -111,6 +138,7 @@ public class KmeanClustering {
         Job job = Job.getInstance(conf, "K means");
         job.setJarByClass(KmeanClustering.class);
         job.setMapperClass(ClosestCentroidMapper.class);
+        job.setCombinerClass(CentroidRecalculatorCombiner.class);
         job.setReducerClass(CentroidRecalculatorReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
@@ -122,16 +150,21 @@ public class KmeanClustering {
     }
 
     public static void main(String[] args) throws Exception {
+        // initiliaze job
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "word count");
-        job.setJarByClass(WordCount.class);
+        conf.set("centroids", args[2]);
+        conf.set("outputStyle", args[4]);
+        Job job = Job.getInstance(conf, "K means");
+        job.setJarByClass(KmeanClustering.class);
         job.setMapperClass(ClosestCentroidMapper.class);
-        job.setCombinerClass(CentroidRecalculatorReducer.class);
+        job.setCombinerClass(CentroidRecalculatorCombiner.class);
         job.setReducerClass(CentroidRecalculatorReducer.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+        // run job
+        job.waitForCompletion(true);
     }
 }

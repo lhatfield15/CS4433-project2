@@ -89,6 +89,7 @@ public class KmeanClusteringTest {
         return centroids;
     }
 
+
     public boolean hasConverged(ArrayList<Point> new_centroids, ArrayList<Point> old_centroids,
             float convergence_distance_threshold) {
         // ensure the number of centroids has stayed the same since last iteration
