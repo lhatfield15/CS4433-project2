@@ -10,6 +10,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
 public class KmeanClustering {
 
@@ -64,6 +65,39 @@ public class KmeanClustering {
         }
     }
 
+    public static class CentroidRecalculatorCombiner
+            extends Reducer<Text,Text,Text,Text> {
+
+        public void reduce(Text key, Iterable<Text> values,
+                           Context context
+        ) throws IOException, InterruptedException {
+            //calculate center of all points in values to get new centroid
+
+            //sum up totals
+            float x_total = 0;
+            float y_total = 0;
+            float count = 0;
+            for(Text pt: values){
+                String[] coords = pt.toString().split(",");
+                float x = Float.valueOf(coords[0]);
+                float y = Float.valueOf(coords[1]);
+                x_total += x;
+                y_total += y;
+                count++;
+            }
+
+            //find new centroid
+            float new_centroid_x = x_total/count;
+            float new_centroid_y = y_total/count;
+
+            //Make it into new centroids
+            Point local_centroid = new Point(new_centroid_x,new_centroid_y);
+
+            //write new centroid pt to output file
+            context.write(key, new Text(local_centroid.toString()));
+        }
+    }
+
     public static class CentroidRecalculatorReducer
             extends Reducer<Text,Text,Text,Text> {
 
@@ -101,6 +135,7 @@ public class KmeanClustering {
         Job job = Job.getInstance(conf, "K means");
         job.setJarByClass(KmeanClustering.class);
         job.setMapperClass(ClosestCentroidMapper.class);
+        job.setCombinerClass(CentroidRecalculatorCombiner.class);
         job.setReducerClass(CentroidRecalculatorReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
@@ -109,6 +144,44 @@ public class KmeanClustering {
 
         //run job
         job.waitForCompletion(true);
+
+//        long startTime = System.nanoTime();
+//
+//        Configuration conf = new Configuration();
+//        Job job = Job.getInstance(conf, "Celebrity");
+//        job.setJarByClass(Task_h.class);
+//
+//        job.setMapperClass(Task_h.TokenizerMapper.class);
+//        //job.setNumReduceTasks(0);
+//        //job.setCombinerClass(Task_h.IntSumReducer.class);
+//        job.setReducerClass(Task_h.IntSumReducer.class);
+//
+//        job.setOutputKeyClass(Text.class);
+//        job.setOutputValueClass(IntWritable.class);
+//
+//        FileInputFormat.addInputPath(job, new Path(args[0]));
+//        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+//        job.waitForCompletion(true);
+//
+//        //Job2
+//        Configuration conf2 = new Configuration();
+//        Job job2 = Job.getInstance(conf2, "Celebrity 1");
+//        job2.setJarByClass(Task_h.class);
+//
+//        job2.setMapperClass(Task_h.TokenizerMapper2.class);
+//        job2.setNumReduceTasks(0);
+//
+//        job2.setOutputKeyClass(IntWritable.class);
+//        job2.setOutputValueClass(IntWritable.class);
+//
+//        FileInputFormat.addInputPath(job2, new Path(args[1]));
+//        FileOutputFormat.setOutputPath(job2, new Path(args[2]));
+//        job2.waitForCompletion(true);
+//
+//        long endTime = System.nanoTime();
+//        long timeElapsed = endTime - startTime;
+//        System.out.println("Execution time in milliseconds: " + timeElapsed/ 1000000);
+//        System.exit(job2.waitForCompletion(true) ? 0 : 1);
     }
 
     public static void main(String[] args) throws Exception {

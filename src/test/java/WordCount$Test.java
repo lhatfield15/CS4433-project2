@@ -3,10 +3,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class WordCount$Test {
+    public String outputFolder = "/KMeansOutput";
 
     @Test
     public void debug() throws Exception {
-        String[] input = new String[2];
+        String[] input = new String[5];
 
         /*
         1. put the data.txt into a folder in your pc
@@ -16,10 +17,13 @@ public class WordCount$Test {
         */
 
         System.setProperty("hadoop.home.dir", "C:\\winutils\\");
-        input[0] = "file:///C:/Users/Alex/IdeaProjects/WordCount/data.txt";
-        input[1] = "file:///C:/Users/Alex/IdeaProjects/CS4433_Project_2/Test.txt";
+        input[0] = "file:///" + FileSystemBase.fileBase + "/data_points_TEST.txt";
+        input[1] = "file:///" + FileSystemBase.fileBase + outputFolder;
+        input[2] = "4904,121 5627.009,657.0088";
+        input[3] = "2";
+        input[4] = "file:///" + FileSystemBase.fileBase + "/TestResults/PtWithCentroids.txt";
 
-        WordCount wc = new WordCount();
+        KmeanReturnPt_Cen wc = new KmeanReturnPt_Cen();
         wc.debug(input);
     }
 }

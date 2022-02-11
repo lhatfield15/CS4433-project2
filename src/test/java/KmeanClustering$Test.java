@@ -47,7 +47,7 @@ public class KmeanClustering$Test {
     public String outputFolder = "/KMeansOutput";
     @Test
     public void debug() throws Exception {
-        String[] input = new String[4];
+        String[] input = new String[5];
 
         /*
         1. put the data.txt into a folder in your pc
@@ -58,10 +58,11 @@ public class KmeanClustering$Test {
 
         //This System property thing was breaking things
         System.setProperty("hadoop.home.dir", "C:\\winutils\\");
-        input[0] = "file:///" + FileSystemBase.fileBase + "/data_points.txt";
+        input[0] = "file:///" + FileSystemBase.fileBase + "/data_points_TEST.txt";
         input[1] = "file:///" + FileSystemBase.fileBase + outputFolder;
         input[2] = "4904,121 5627.009,657.0088";
-        input[3] = "5";
+        input[3] = "2";
+        input[4] = "file:///" + FileSystemBase.fileBase + "/TestResults/PtWithCentroids.txt";
 
         boolean reset = false;
         float convergence_distance_threshold = 1;
@@ -146,6 +147,12 @@ public class KmeanClustering$Test {
                 //Run one iteration of kmeans clustering
                 KmeanClustering wc = new KmeanClustering();
                 wc.debug(input);
+
+                //the program did not break due to the convergence, output all points w/ centroids
+                if (i == (R-1)) {
+                    KmeanReturnPt_Cen.main(input);
+                    System.out.println("Centroids did not converge in runs, output the current centroids w/ points");
+                }
             }
         }//end reset else
     }
