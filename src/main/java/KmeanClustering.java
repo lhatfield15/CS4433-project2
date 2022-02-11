@@ -1,5 +1,7 @@
 import java.io.IOException;
 import java.lang.Math;
+import java.util.ArrayList;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -22,34 +24,33 @@ public class KmeanClustering {
             this.y = pt_y;
         }
 
-        public String toString(){
-            return Float.toString(this.x)  + "," + Float.toString(this.y);
+        public String toString() {
+            return Float.toString(this.x) + "," + Float.toString(this.y);
         }
     }
 
     public static class ClosestCentroidMapper
-            extends Mapper<Object, Text, Text, Text>{
+            extends Mapper<Object, Text, Text, Text> {
 
-        private float distance(float x1, float x2, float y1, float y2){
+        private float distance(float x1, float x2, float y1, float y2) {
             return (float) Math.sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
         }
 
-        public void map(Object key, Text value, Context context
-        ) throws IOException, InterruptedException {
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
-            //get input point
+            // get input point
             String[] record = value.toString().split(",");
             float x_value = Float.valueOf(record[0]);
             float y_value = Float.valueOf(record[1]);
             Point pt = new Point(x_value, y_value);
 
-            //get centroids
+            // get centroids
             String[] cens = context.getConfiguration().get("centroids").toString().split(" "); // "" "1,2" "2,3"
 
-            //find closest centroid to input point
+            // find closest centroid to input point
             Point closest_centroid = null;
             float closest_distance = Float.MAX_VALUE;
-            for (String cen: cens){
+            for (String cen : cens) {
                 float cent_x = Float.parseFloat(cen.split(",")[0]);
                 float cent_y = Float.parseFloat(cen.split(",")[1]);
                 float dist = distance(pt.x, cent_x, pt.y, cent_y);
@@ -59,25 +60,26 @@ public class KmeanClustering {
                 }
             }
 
-            //output closest centroid to pt
+            // output closest centroid to pt
             context.write(new Text(closest_centroid.toString()), new Text(pt.toString()));
         }
     }
 
     public static class CentroidRecalculatorReducer
-            extends Reducer<Text,Text,Text,Text> {
+            extends Reducer<Text, Text, Text, Text> {
 
         public void reduce(Text key, Iterable<Text> values,
-                           Context context
-        ) throws IOException, InterruptedException {
-            //calculate center of all points in values to get new centroid
+                Context context) throws IOException, InterruptedException {
+            // calculate center of all points in values to get new centroid
 
-            //sum up totals
+            ArrayList<String> points = new ArrayList<>();
+            // sum up totals
             float x_total = 0;
             float y_total = 0;
             float count = 0;
-            for(Text pt: values){
+            for (Text pt : values) {
                 String[] coords = pt.toString().split(",");
+                points.add(coords[0] + "," + coords[1]);
                 float x = Float.valueOf(coords[0]);
                 float y = Float.valueOf(coords[1]);
                 x_total += x;
@@ -85,19 +87,27 @@ public class KmeanClustering {
                 count++;
             }
 
-            //find new centroid
-            float new_centroid_x = x_total/count;
-            float new_centroid_y = y_total/count;
+            float new_centroid_x = x_total / count;
+            float new_centroid_y = y_total / count;
 
-            //write new centroid pt to output file
-            context.write(new Text(String.valueOf(new_centroid_x)), new Text(String.valueOf(new_centroid_y)));
+            String out_style = context.getConfiguration().get("outputStyle").toString();
+
+            // write new centroid pt to output file
+            context.write(new Text("Centroid"),
+                    new Text(String.valueOf(new_centroid_x) + "," + String.valueOf(new_centroid_y)));
+            if (out_style.equals("b")) {
+                for (String pt : points) {
+                    context.write(new Text("Point"), new Text(pt));
+                }
+            }
         }
     }
 
-    public void debug(String[] args) throws Exception{
-        //initiliaze job
+    public void debug(String[] args) throws Exception {
+        // initiliaze job
         Configuration conf = new Configuration();
         conf.set("centroids", args[2]);
+        conf.set("outputStyle", args[4]);
         Job job = Job.getInstance(conf, "K means");
         job.setJarByClass(KmeanClustering.class);
         job.setMapperClass(ClosestCentroidMapper.class);
@@ -107,7 +117,7 @@ public class KmeanClustering {
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        //run job
+        // run job
         job.waitForCompletion(true);
     }
 

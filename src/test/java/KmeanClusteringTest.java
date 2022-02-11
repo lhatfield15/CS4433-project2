@@ -1,9 +1,7 @@
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -42,6 +40,9 @@ public class KmeanClusteringTest {
     }
 
     public void runKMeansCycle(String[] input) throws Exception {
+        // so we don't get the error if someone forgot to delete
+        deleteOldOutputDirectory();
+        //run cycle
         KmeanClustering wc = new KmeanClustering();
         wc.debug(input);
     }
@@ -53,13 +54,16 @@ public class KmeanClusteringTest {
 
         try {
             // read the new centroids
-            File myObj = new File(FileSystemBase.fileBase + outputFolder + "/part-r-00000");
+            File myObj = new File(FileSystemBase.fileBase + outputFolder + outputFile);
             Scanner myReader = new Scanner(myObj);
             // read each line of points
             while (myReader.hasNextLine()) {
                 // create point from coords and add to centroid list
                 String data[] = myReader.nextLine().split("\t");
-                centroids.add(new Point(Float.valueOf(data[0]), Float.valueOf(data[1])));
+                if (data[0].equals("Centroid")) {
+                    String coords[] = data[1].split(",");
+                    centroids.add(new Point(Float.valueOf(coords[0]), Float.valueOf(coords[1])));
+                }
             }
             myReader.close();
         } catch (FileNotFoundException e) {
@@ -89,7 +93,20 @@ public class KmeanClusteringTest {
             float convergence_distance_threshold) {
         // ensure the number of centroids has stayed the same since last iteration
         if (old_centroids.size() != new_centroids.size()) {
-            System.out.println("New and Old Centroid count differed");
+            System.out.println("New and Old Centroid count differed, generating new centroids");
+            if (new_centroids.size() > old_centroids.size()){
+                System.out.println("Problem, new centroids created");
+                System.exit(1);
+            }
+            else{
+                //generate a new point for a centroid
+                Random rand = new Random();
+                while(old_centroids.size() > new_centroids.size()){
+                    float x = rand.nextFloat() * 10000;
+                    float y = rand.nextFloat() * 10000;
+                    new_centroids.add(new Point(x, y));
+                }
+            }
         }
 
         // compare if the old centroids were within tolerance of new centroids
@@ -124,7 +141,30 @@ public class KmeanClusteringTest {
         return new_input.substring(1);
     }
 
+    public void appendConvergence(boolean hasConverged){
+        // Open given file in append mode by creating an
+        // object of BufferedWriter class
+        try {
+            BufferedWriter out = new BufferedWriter(
+                    new FileWriter(FileSystemBase.fileBase + outputFolder + outputFile, true));
+
+            // Writing on output stream
+            if (hasConverged){
+                out.write("The System Converged.");
+            }
+            else{
+                out.write("The System Did Not Converge.");
+            }
+            // Closing the connection
+            out.close();
+        }
+        catch (Exception e){
+            System.out.println("Error writing convergence to file");
+        }
+    }
+
     public String outputFolder = "/KMeansOutput";
+    public String outputFile = "/part-r-00000";
 
     @Test
     public void debug() throws Exception {
@@ -143,39 +183,35 @@ public class KmeanClusteringTest {
         // System.setProperty("hadoop.home.dir", "C:\\winutils\\");
         input[0] = "file:///" + FileSystemBase.fileBase + "/data_points.txt"; // input
         input[1] = "file:///" + FileSystemBase.fileBase + outputFolder; // output
-        input[2] = "250,250 5250,5260"; // initial centroids
-        input[3] = "5"; // number of iterations
+        input[2] = "9109,250 250,5260"; // initial centroids
+        input[3] = "10"; // number of iterations
         input[4] = "a"; // output centroids/convergence = a, output clustered data points = 'b'
 
-        boolean reset = false;
         float convergence_distance_threshold = 1;
+        boolean hasConverged = false;
 
-        if (reset) {
-            // run to reset
-            runKMeansCycle(input);
-        } else {
-            int R = Integer.valueOf(input[3]);
-            for (int i = 0; i < R; i++) {
-                // check for convergence only if not first cycle
-                if (i > 0) {
-                    // acquire past (old) and present (new) centroids
-                    ArrayList<Point> new_centroids = generateCentroidsFromFile();
-                    ArrayList<Point> old_centroids = generateCentroidsFromInput(input[2]);
+        int R = Integer.valueOf(input[3]);
+        for (int i = 0; i < R; i++) {
+            // check for convergence only if not first cycle
+            if (i > 0) {
+                // acquire past (old) and present (new) centroids
+                ArrayList<Point> new_centroids = generateCentroidsFromFile();
+                ArrayList<Point> old_centroids = generateCentroidsFromInput(input[2]);
 
-                    // end program if centroids are in convergence
-                    if (hasConverged(new_centroids, old_centroids, convergence_distance_threshold)) {
-                        System.out.println("Points are in convergence tolerance");
-                        break;
-                    }
-
-                    input[2] = newInputFromCentroids(new_centroids);
+                // end program if centroids are in convergence
+                if (hasConverged(new_centroids, old_centroids, convergence_distance_threshold)) {
+                    hasConverged = true;
+                    break;
                 }
 
-                // so we don't get the error
-                deleteOldOutputDirectory();
-                // Run one iteration of kmeans clustering
-                runKMeansCycle(input);
+                input[2] = newInputFromCentroids(new_centroids);
             }
-        } // end reset else
-    }
+
+            // Run one iteration of kmeans clustering
+            runKMeansCycle(input);
+        }//end cycle for loop
+        if(input[4].equals("a")) {
+            appendConvergence(hasConverged);
+        }
+    }//end debug
 }
