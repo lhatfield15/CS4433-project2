@@ -1,8 +1,6 @@
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
-public class WordCount$Test {
+public class WordCountTest {
 
     @Test
     public void debug() throws Exception {
