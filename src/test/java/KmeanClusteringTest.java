@@ -94,7 +94,6 @@ public class KmeanClusteringTest {
             float convergence_distance_threshold) {
         // ensure the number of centroids has stayed the same since last iteration
         if (old_centroids.size() != new_centroids.size()) {
-            System.out.println("New and Old Centroid count differed, generating new centroids");
             if (new_centroids.size() > old_centroids.size()){
                 System.out.println("Problem, new centroids created");
                 System.exit(1);
@@ -184,7 +183,7 @@ public class KmeanClusteringTest {
         // System.setProperty("hadoop.home.dir", "C:\\winutils\\");
         input[0] = "file:///" + FileSystemBase.fileBase + "/data_points.txt"; // input
         input[1] = "file:///" + FileSystemBase.fileBase + outputFolder; // output
-        input[2] = "9109,250 250,5260"; // initial centroids
+        input[2] = "250,5000 250,9000"; // initial centroids
         input[3] = "10"; // number of iterations
         input[4] = "a"; // output centroids/convergence = a, output clustered data points = 'b'
 

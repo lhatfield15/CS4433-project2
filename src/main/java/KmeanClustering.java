@@ -108,7 +108,7 @@ public class KmeanClustering {
                 points.add(data[0] + "," + data[1]);
                 float x = Float.valueOf(data[0]);
                 float y = Float.valueOf(data[1]);
-                float c = Float.valueOf(data[1]);
+                float c = Float.valueOf(data[2]);
                 x_total += x;
                 y_total += y;
                 count += c;
