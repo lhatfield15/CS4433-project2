@@ -8,7 +8,6 @@ import static org.junit.Assert.*;
 
 public class KmeanClusteringTest {
 
-
     @Test
     public void debug() throws Exception {
         String[] input = new String[6];
@@ -26,13 +25,13 @@ public class KmeanClusteringTest {
         // System.setProperty("hadoop.home.dir", "C:\\winutils\\");
         input[0] = "file:///" + FileSystemBase.fileBase + "/data_points.txt"; // input
         input[1] = "file:///" + FileSystemBase.fileBase + KmeanClustering.outputFolder; // output
-        input[2] = "";//will be filled by program later as centroid seed
+        input[2] = "";// will be filled by program later as centroid seed
         input[3] = "10"; // number of iterations
         input[4] = "a"; // output centroids/convergence = a, output clustered data points = 'b'
-        input[5] = "1"; //convergence_distance_threshold
+        input[5] = "1"; // convergence_distance_threshold
 
         KmeanClustering km = new KmeanClustering();
         km.debug(input);
 
-    }//end debug
+    }// end debug
 }
